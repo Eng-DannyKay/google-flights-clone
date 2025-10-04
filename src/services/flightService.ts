@@ -1,46 +1,35 @@
-// src/services/flightService.ts
-
-import apiClient from './apiClient';
-
-export interface FlightSearchParams {
-  origin: string;
-  destination: string;
-  departDate: string;   
-  returnDate?: string;  
-  adults?: number;
-}
-export interface FlightData {
-  id: string;
-  airline: string;
-  origin: string;
-  destination: string;
-  departTime: string;   
-  arrivalTime: string;
-  price: number;
-  stops: number;
-}
-
-export interface FlightSearchResponse {
-  result: FlightData[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+import apiClient from "./apiClient";
+import type { FlightSearchParams, FlightSearchResponse } from "../types/flights";
+import { defaultParams } from "../utils/constants";
 
 export const searchFlights = async (
   params: FlightSearchParams
 ): Promise<FlightSearchResponse> => {
-  const { origin, destination, departDate, returnDate, adults = 1 } = params;
+  const {
+    originSkyId,
+    destinationSkyId,
+    originEntityId,
+    destinationEntityId,
+    date,
+    adults = 1,
+    ...rest
+  } = params;
 
-  const response = await apiClient.get('/flights/search', {
-    params: {
-      origin,
-      destination,
-      departDate,
-      returnDate,
-      adults,
-    },
-  });
+  const { data } = await apiClient.get<FlightSearchResponse>(
+    "/searchFlights",
+    {
+      params: {
+        originSkyId,
+        destinationSkyId,
+        originEntityId,
+        destinationEntityId,
+        date,
+        adults,
+        ...defaultParams,
+        ...rest,
+      },
+    }
+  );
 
-  return response.data as FlightSearchResponse;
+  return data;
 };

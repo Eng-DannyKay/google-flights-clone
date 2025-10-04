@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   TextField,
@@ -9,44 +9,58 @@ import {
   Stack,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs, { Dayjs } from 'dayjs';
-
-interface AirportOption {
-  code: string;
-  label: string;
-}
-
-const sampleAirports: AirportOption[] = [
-  { code: 'JFK', label: 'John F. Kennedy (JFK)' },
-  { code: 'LAX', label: 'Los Angeles (LAX)' },
-  { code: 'LHR', label: 'London Heathrow (LHR)' },
-];
+  CircularProgress,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs, { type Dayjs } from "dayjs";
+import { useLocations } from "../../hooks/useLocations";
+import { useDebounce } from "../../hooks/useDebounce";
+import type { Location } from "../../types/flights";
 
 const FlightSearchForm: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
-  const [from, setFrom] = useState<AirportOption | null>(null);
-  const [to, setTo] = useState<AirportOption | null>(null);
+  const [from, setFrom] = useState<Location | null>(null);
+  const [to, setTo] = useState<Location | null>(null);
   const [depart, setDepart] = useState<Dayjs | null>(dayjs());
   const [returnDate, setReturnDate] = useState<Dayjs | null>(null);
+  const [fromInput, setFromInput] = useState("");
+  const [toInput, setToInput] = useState("");
+
+  const debouncedFromInput = useDebounce(fromInput, 500);
+  const debouncedToInput = useDebounce(toInput, 500);
+
+  const { data: fromLocations = [], isLoading: isLoadingFrom } = useLocations(
+    { query: debouncedFromInput },
+    debouncedFromInput.length > 2
+  );
+  const { data: toLocations = [], isLoading: isLoadingTo } = useLocations(
+    { query: debouncedToInput },
+    debouncedToInput.length > 2
+  );
+
+  const getOptionLabel = (option: Location): string =>
+    [option.code, option.city, option.name].filter(Boolean).join(" — ");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!from || !to || !depart) return;
 
     const params = new URLSearchParams({
-      from: from.code,
-      to: to.code,
-      depart: depart.format('YYYY-MM-DD'),
-      return: returnDate?.format('YYYY-MM-DD') || '',
+      originSkyId: from.code,
+      originEntityId: from.entityId,
+      destinationSkyId: to.code,
+      destinationEntityId: to.entityId,
+      date: depart.format("YYYY-MM-DD"),
+      returnDate: returnDate?.format("YYYY-MM-DD") || "",
     });
 
     navigate(`/results?${params.toString()}`);
   };
+
+  const isFormValid = Boolean(from && to && depart);
 
   return (
     <Paper
@@ -55,39 +69,73 @@ const FlightSearchForm: React.FC = () => {
         p: 3,
         borderRadius: 3,
         maxWidth: 900,
-        mx: 'auto',
+        mx: "auto",
         mt: 4,
       }}
     >
       <Box component="form" onSubmit={handleSubmit}>
         <Stack
           spacing={2}
-          direction={isDesktop ? 'row' : 'column'}
-          alignItems="center"
+          direction={isDesktop ? "row" : "column"}
+          alignItems={isDesktop ? "flex-end" : "stretch"}
         >
           <Autocomplete
             fullWidth
-            options={sampleAirports}
-            getOptionLabel={(opt) => `${opt.code} — ${opt.label}`}
-            isOptionEqualToValue={(o, v) => o.code === v.code}
+            options={fromLocations}
+            loading={isLoadingFrom}
             value={from}
-            onChange={(_, newVal) => setFrom(newVal)}
-            sx={{ flex: 1 }}
+            inputValue={fromInput}
+            onChange={(_, newValue) => setFrom(newValue)}
+            onInputChange={(_, newInputValue) => setFromInput(newInputValue)}
+            getOptionLabel={getOptionLabel}
+            isOptionEqualToValue={(option, value) => option.code === value.code}
             renderInput={(params) => (
-              <TextField {...params} label="From" required />
+              <TextField
+                {...params}
+                label="From"
+                required
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingFrom && <CircularProgress size={20} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
             )}
           />
 
           <Autocomplete
             fullWidth
-            options={sampleAirports}
-            getOptionLabel={(opt) => `${opt.code} — ${opt.label}`}
-            isOptionEqualToValue={(o, v) => o.code === v.code}
+            options={toLocations}
+            loading={isLoadingTo}
             value={to}
-            onChange={(_, newVal) => setTo(newVal)}
-            sx={{ flex: 1 }}
+            inputValue={toInput}
+            onChange={(_, newValue) => setTo(newValue)}
+            onInputChange={(_, newInputValue) => setToInput(newInputValue)}
+            getOptionLabel={getOptionLabel}
+            isOptionEqualToValue={(option, value) => option.code === value.code}
             renderInput={(params) => (
-              <TextField {...params} label="To" required />
+              <TextField
+                {...params}
+                label="To"
+                required
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingTo && <CircularProgress size={20} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
             )}
           />
 
@@ -96,9 +144,11 @@ const FlightSearchForm: React.FC = () => {
             value={depart}
             onChange={setDepart}
             slotProps={{
-              textField: { required: true, fullWidth: true },
+              textField: {
+                required: true,
+                fullWidth: true,
+              },
             }}
-            sx={{ flex: 1 }}
           />
 
           <DatePicker
@@ -106,20 +156,23 @@ const FlightSearchForm: React.FC = () => {
             value={returnDate}
             onChange={setReturnDate}
             slotProps={{
-              textField: { fullWidth: true },
+              textField: {
+                fullWidth: true,
+              },
             }}
-            sx={{ flex: 1 }}
           />
 
           <Button
             variant="contained"
             size="large"
             type="submit"
+            disabled={!isFormValid}
             sx={{
               px: 4,
               py: 1.5,
               minWidth: 120,
-              whiteSpace: 'nowrap',
+              whiteSpace: "nowrap",
+              height: "56px",
             }}
           >
             Search
