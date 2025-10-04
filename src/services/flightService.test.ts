@@ -36,7 +36,6 @@ describe("flightService", () => {
     };
 
     it("should search flights successfully", async () => {
-      // Mock successful API response
       mockApiClient.get.mockResolvedValueOnce({
         data: mockFlightSearchResponse,
       });
