@@ -68,7 +68,7 @@ const FlightSearchForm: React.FC = () => {
       sx={{
         p: 3,
         borderRadius: 3,
-        maxWidth: 900,
+        maxWidth: "80%",
         mx: "auto",
         mt: 4,
       }}

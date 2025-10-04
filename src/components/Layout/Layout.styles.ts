@@ -35,10 +35,6 @@ export const LogoContainer = styled(Box)(({ theme }) => ({
 
 export const MainContainer = styled(Box)(({ theme }) => ({
   minHeight: 'calc(100vh - 120px)',
-  background: 'linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)',
-  borderRadius: '12px',
-  padding: '20px 16px',
-  boxShadow: '0 2px 16px rgba(0, 0, 0, 0.08)',
   [theme.breakpoints.up('sm')]: {
     minHeight: 'calc(100vh - 140px)',
     borderRadius: '16px',
